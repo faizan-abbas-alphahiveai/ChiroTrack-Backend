@@ -124,9 +124,11 @@ export const login = async (req, res) => {
 
 export const googleSignIn = async (req, res) => {
   try {
+    console.log('Google Sign-in request received:', { body: req.body, headers: req.headers });
     const { idToken } = req.body;
 
     if (!idToken) {
+      console.log('No ID token provided');
       return res.status(400).json({
         success: false,
         message: 'ID token is required'

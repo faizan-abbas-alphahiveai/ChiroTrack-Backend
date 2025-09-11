@@ -10,16 +10,18 @@ const initializeFirebase = () => {
 
     if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
       // Read from environment variable when deployed (e.g., Render)
+      console.log('Using Firebase service account from environment variable');
       serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
     } else {
       // Fallback to local file for development
+      console.log('Using Firebase service account from local file');
       serviceAccount = JSON.parse(readFileSync('./chirotrack-backend-firebase-adminsdk-fbsvc-d4a3b88ce4.json', 'utf8'));
     }
 
     if (!admin.apps.length) {
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
-        projectId: serviceAccount.project_id || 'chirotrack-backend'
+        projectId: serviceAccount.project_id || process.env.FIREBASE_PROJECT_ID || 'chirotrack-backend'
       });
     }
 

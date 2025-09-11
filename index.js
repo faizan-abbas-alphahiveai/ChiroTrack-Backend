@@ -20,6 +20,20 @@ app.use(express.urlencoded({ extended: true }));
 
 
 
+// Health check endpoint
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'ChiroTrack Backend API is running',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      auth: '/api/auth',
+      patients: '/api/patients',
+      users: '/api/users'
+    }
+  });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/users', userRoutes);
