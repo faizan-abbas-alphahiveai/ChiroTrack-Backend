@@ -85,24 +85,11 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Normalize email for consistent lookup
     const normalizedEmail = normalizeEmail(email);
-    
-    // Log the original and normalized email for debugging
-    console.log('Login attempt:', { 
-      originalEmail: email, 
-      normalizedEmail: normalizedEmail
-    });
+  const user = await User.findOne({ email: normalizedEmail });
 
-    // Find user by normalized email - THIS IS THE KEY FIX
-    const user = await User.findOne({ 
-      email: { 
-        $regex: new RegExp(`^${normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
-      } 
-    });
     
-    // Alternative approach: Store normalized email in database and query by it
-    // const user = await User.findOne({ normalizedEmail: normalizedEmail });
+
 
     if (!user) {
       return res.status(401).json({
@@ -111,7 +98,7 @@ export const login = async (req, res) => {
       });
     }
 
-    // Verify password
+ 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({
@@ -120,14 +107,12 @@ export const login = async (req, res) => {
       });
     }
 
-    // Generate token
     const token = generateToken(user._id);
 
-    // Update last login
+   
     user.lastLogin = new Date();
     await user.save();
 
-    // Remove password from response
     const userResponse = user.toObject();
     delete userResponse.password;
 
