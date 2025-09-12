@@ -1,8 +1,5 @@
 import mongoose from 'mongoose';
 
-
-
-
 const patientSchema = new mongoose.Schema({
   fullName: {
     type: String,
@@ -23,13 +20,24 @@ const patientSchema = new mongoose.Schema({
     required: [true, 'Date of birth is required'],
     validate: {
       validator: function(date) {
-        
         return date <= new Date();
       },
       message: 'Date of birth cannot be in the future'
     }
   },
- 
+
+  // ✅ New field: lastScan
+  lastScan: {
+    type: Date,
+    default: null,
+    validate: {
+      validator: function(date) {
+        return !date || date <= new Date(); 
+      },
+      message: 'Last scan date cannot be in the future'
+    }
+  },
+
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
