@@ -4,6 +4,7 @@ import User from '../models/User.js';
 import TokenBlacklist from '../models/TokenBlacklist.js';
 import { admin } from '../config/firebase.js';
 import { sendPasswordResetEmail } from '../config/email.js';
+import { normalizeEmail } from '../utils/emailUtils.js';
 
 
 
@@ -19,8 +20,18 @@ export const register = async (req, res) => {
   try {
     const { firstName, lastName, email, password } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    // Normalize email for consistent storage
+    const normalizedEmail = normalizeEmail(email);
+    
+    // Log the original and normalized email for debugging
+    console.log('Registration attempt:', { 
+      originalEmail: email, 
+      normalizedEmail: normalizedEmail,
+      validationNormalized: req.body.email 
+    });
+
+    // Check if user already exists with normalized email
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -32,11 +43,11 @@ export const register = async (req, res) => {
     const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create new user
+    // Create new user with normalized email
     const user = await User.create({
       firstName,
       lastName,
-      email,
+      email: normalizedEmail,
       password: hashedPassword,
       provider: 'email'
     });
@@ -74,8 +85,18 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find user by email
-    const user = await User.findOne({ email });
+    // Normalize email for consistent lookup
+    const normalizedEmail = normalizeEmail(email);
+    
+    // Log the original and normalized email for debugging
+    console.log('Login attempt:', { 
+      originalEmail: email, 
+      normalizedEmail: normalizedEmail,
+      validationNormalized: req.body.email 
+    });
+
+    // Find user by normalized email
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -193,8 +214,10 @@ export const sendPasswordResetOTP = async (req, res) => {
   try {
     const { email } = req.body;
 
+    // Normalize email for consistent lookup
+    const normalizedEmail = normalizeEmail(email);
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -223,7 +246,7 @@ export const sendPasswordResetOTP = async (req, res) => {
     await user.save();
 
     // Send OTP via email
-    const emailResult = await sendPasswordResetEmail(email, otp);
+    const emailResult = await sendPasswordResetEmail(normalizedEmail, otp);
     
     if (!emailResult.success) {
       console.error('Failed to send email:', emailResult.error);
@@ -235,7 +258,7 @@ export const sendPasswordResetOTP = async (req, res) => {
       success: true,
       message: 'Verification code sent to your email address',
       data: {
-        email: email,
+        email: normalizedEmail,
         expiresIn: 180 
       }
     });
@@ -253,7 +276,10 @@ export const verifyPasswordResetOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
 
-    const user = await User.findOne({ email });
+    // Normalize email for consistent lookup
+    const normalizedEmail = normalizeEmail(email);
+
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -320,7 +346,7 @@ export const verifyPasswordResetOTP = async (req, res) => {
       message: 'Email verified successfully',
       data: {
         resetToken: resetToken,
-        email: email
+        email: normalizedEmail
       }
     });
   } catch (error) {
@@ -338,6 +364,8 @@ export const resetPassword = async (req, res) => {
   try {
     const { email, newPassword, confirmPassword } = req.body;
 
+    // Normalize email for consistent lookup
+    const normalizedEmail = normalizeEmail(email);
 
     if (newPassword !== confirmPassword) {
       return res.status(400).json({
@@ -346,8 +374,8 @@ export const resetPassword = async (req, res) => {
       });
     }
 
-    // Find user by email
-    const user = await User.findOne({ email });
+    // Find user by normalized email
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -382,8 +410,10 @@ export const resendPasswordResetOTP = async (req, res) => {
   try {
     const { email } = req.body;
 
+    // Normalize email for consistent lookup
+    const normalizedEmail = normalizeEmail(email);
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -412,7 +442,7 @@ export const resendPasswordResetOTP = async (req, res) => {
     await user.save();
 
     // Send new OTP via email
-    const emailResult = await sendPasswordResetEmail(email, otp);
+    const emailResult = await sendPasswordResetEmail(normalizedEmail, otp);
     
     if (!emailResult.success) {
       console.error('Failed to send email:', emailResult.error);
@@ -425,7 +455,7 @@ export const resendPasswordResetOTP = async (req, res) => {
       success: true,
       message: 'New verification code sent to your email address',
       data: {
-        email: email,
+        email: normalizedEmail,
         expiresIn: 180 
       }
     });

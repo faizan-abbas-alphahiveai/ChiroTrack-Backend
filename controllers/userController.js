@@ -191,6 +191,39 @@ export const updateUser = async (req, res) => {
 
 
 
+export const getUserProfile = async (req, res) => {
+  try {
+   
+    const user = req.user;
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
+    res.json({
+      success: true,
+      message: 'User profile retrieved successfully',
+      data: {
+        user: userResponse
+      }
+    });
+  } catch (error) {
+    console.error('Get user profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while retrieving user profile'
+    });
+  }
+};
+
+
+
 export const updatePassword = async (req, res) => {
   try {
     const { id } = req.params;

@@ -3,7 +3,8 @@ import {
   getUsers,
   getUserById,
   updateUser,
-  updatePassword
+  updatePassword,
+  getUserProfile
 } from '../controllers/userController.js';
 import { authenticate } from '../middleware/auth.js';
 
@@ -13,6 +14,7 @@ const router = express.Router();
 router.use(authenticate);
 
 
+router.get('/profile', getUserProfile);
 router.get('/', getUsers);
 router.get('/:id', getUserById);
 router.put('/:id', updateUser);
