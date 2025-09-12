@@ -16,23 +16,9 @@ export const normalizeEmail = (email) => {
   }
 
   // Convert to lowercase and trim whitespace
-  let normalized = email.toLowerCase().trim();
-  
-  // Extract domain and local part
-  const [localPart, domain] = normalized.split('@');
-  
-  if (!localPart || !domain) {
-    return normalized;
-  }
-  
-  // For Gmail addresses, remove dots from the local part
-  // Gmail treats saad.aslam49@gmail.com and saadaslam49@gmail.com as the same
-  if (domain === 'gmail.com' || domain === 'googlemail.com') {
-    const normalizedLocalPart = localPart.replace(/\./g, '');
-    return `${normalizedLocalPart}@${domain}`;
-  }
-  
-  return normalized;
+  return email.toLowerCase().trim();
+
+  // ❌ Don't remove dots from local part
 };
 
 /**
