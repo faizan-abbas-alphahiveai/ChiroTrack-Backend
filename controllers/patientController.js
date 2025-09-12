@@ -63,24 +63,22 @@ export const getPatients = async (req, res) => {
     const userId = req.user._id;
     const { page = 1, limit = 10, search } = req.query;
 
-
     const query = { createdBy: userId };
 
     if (search) {
       query.fullName = { $regex: search, $options: 'i' };
     }
 
-  
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
- 
+    // Specify fields to return, including lastScan
     const patients = await Patient.find(query)
+      .select('fullName gender dateOfBirth lastScan createdBy createdAt updatedAt')
       .populate('createdBy', 'firstName lastName email')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
 
-  
     const total = await Patient.countDocuments(query);
 
     res.json({
@@ -107,6 +105,7 @@ export const getPatients = async (req, res) => {
 };
 
 
+
 export const getPatient = async (req, res) => {
   try {
     const { id } = req.params;
@@ -115,7 +114,9 @@ export const getPatient = async (req, res) => {
     const patient = await Patient.findOne({
       _id: id,
       createdBy: userId
-    }).populate('createdBy', 'firstName lastName email');
+    })
+    .select('fullName gender dateOfBirth lastScan createdBy createdAt updatedAt')  // explicitly select fields including lastScan
+    .populate('createdBy', 'firstName lastName email');
 
     if (!patient) {
       return res.status(404).json({
@@ -147,6 +148,7 @@ export const getPatient = async (req, res) => {
     });
   }
 };
+
 
 
 export const updatePatient = async (req, res) => {
@@ -306,15 +308,17 @@ export const searchPatients = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
 
-    const patients = await Patient.find(query)
-      .populate('createdBy', 'firstName lastName email')
-      .sort({ 
-        // Sort by relevance (exact matches first, then partial matches)
-        fullName: 1,
-        createdAt: -1 
-      })
-      .skip(skip)
-      .limit(parseInt(limit));
+  const patients = await Patient.find(query)
+  .select('fullName gender dateOfBirth lastScan createdBy createdAt updatedAt') 
+  .populate('createdBy', 'firstName lastName email')
+  .sort({ 
+ 
+    fullName: 1,
+    createdAt: -1 
+  })
+  .skip(skip)
+  .limit(parseInt(limit));
+
 
     // Get total count for pagination
     const total = await Patient.countDocuments(query);
