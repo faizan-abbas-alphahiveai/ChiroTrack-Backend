@@ -7,6 +7,7 @@ import { initializeFirebase } from './config/firebase.js';
 import authRoutes from './routes/auth.js';
 import patientRoutes from './routes/patient.js';
 import userRoutes from './routes/user.js';
+import poseDetectionRoutes from './routes/poseDetection.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -29,7 +30,8 @@ app.get('/', (req, res) => {
     endpoints: {
       auth: '/api/auth',
       patients: '/api/patients',
-      users: '/api/users'
+      users: '/api/users',
+      poseDetection: '/api/pose-detection'
     }
   });
 });
@@ -37,6 +39,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/pose-detection', poseDetectionRoutes);
 
 
 

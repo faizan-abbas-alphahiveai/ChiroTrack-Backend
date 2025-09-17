@@ -1,2 +1,0 @@
-# ChiroTrack-Backend
-

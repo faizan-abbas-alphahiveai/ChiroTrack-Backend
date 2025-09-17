@@ -216,6 +216,117 @@ const validatePatientUpdate = [
   handleValidationErrors
 ];
 
+// Pose Detection Validation
+const validatePoseDetectionCreation = [
+  body('patientId')
+    .isMongoId()
+    .withMessage('Valid patient ID is required'),
+  
+  body('summary.validPosesDetected')
+    .isInt({ min: 0 })
+    .withMessage('Valid poses detected must be a non-negative integer'),
+  
+  body('summary.bestPoseAccuracy')
+    .isFloat({ min: 0, max: 100 })
+    .withMessage('Best pose accuracy must be between 0 and 100'),
+  
+  body('summary.jointsDetected')
+    .matches(/^\d+\/\d+$/)
+    .withMessage('Joints detected must be in format "detected/total"'),
+  
+  body('summary.criticalJointsDetected')
+    .isBoolean()
+    .withMessage('Critical joints detected must be a boolean value'),
+  
+  body('bodyDetection')
+    .isArray({ min: 1 })
+    .withMessage('Body detection data is required'),
+  
+  body('bodyDetection.*.region')
+    .isIn(['Head', 'Torso', 'Arms', 'Legs'])
+    .withMessage('Body region must be Head, Torso, Arms, or Legs'),
+  
+  body('bodyDetection.*.detected')
+    .isInt({ min: 0 })
+    .withMessage('Detected count must be a non-negative integer'),
+  
+  body('bodyDetection.*.total')
+    .isInt({ min: 1 })
+    .withMessage('Total count must be a positive integer'),
+  
+  body('bodyDetection.*.accuracy')
+    .isFloat({ min: 0, max: 100 })
+    .withMessage('Accuracy must be between 0 and 100'),
+  
+  body('proportions.height')
+    .isFloat({ min: 0 })
+    .withMessage('Height must be a non-negative number'),
+  
+  body('proportions.shoulders')
+    .isFloat({ min: 0 })
+    .withMessage('Shoulders measurement must be a non-negative number'),
+  
+  body('proportions.ratio')
+    .isFloat({ min: 0 })
+    .withMessage('Ratio must be a non-negative number'),
+  
+  body('joints')
+    .isArray({ min: 1 })
+    .withMessage('Joints data is required'),
+  
+  body('joints.*.name')
+    .isIn([
+      'Head', 'L. Shoulder', 'R. Shoulder', 'L. Elbow', 'R. Elbow',
+      'L. Wrist', 'R. Wrist', 'L. Hip', 'R. Hip', 'L. Knee', 'R. Knee',
+      'L. Ankle', 'R. Ankle', 'Neck', 'Torso'
+    ])
+    .withMessage('Invalid joint name'),
+  
+  body('joints.*.status')
+    .isBoolean()
+    .withMessage('Joint status must be true or false'),
+  
+  body('joints.*.confidence')
+    .isFloat({ min: 0, max: 100 })
+    .withMessage('Joint confidence must be between 0 and 100'),
+  
+  body('joints.*.screenCoordinates.x')
+    .optional()
+    .isFloat()
+    .withMessage('Screen X coordinate must be a number'),
+  
+  body('joints.*.screenCoordinates.y')
+    .optional()
+    .isFloat()
+    .withMessage('Screen Y coordinate must be a number'),
+  
+  body('joints.*.visionCoordinates.x')
+    .optional()
+    .isFloat()
+    .withMessage('Vision X coordinate must be a number'),
+  
+  body('joints.*.visionCoordinates.y')
+    .optional()
+    .isFloat()
+    .withMessage('Vision Y coordinate must be a number'),
+  
+  body('notes')
+    .optional()
+    .isLength({ max: 1000 })
+    .withMessage('Notes cannot exceed 1000 characters'),
+  
+  handleValidationErrors
+];
+
+const validatePoseDetectionUpdate = [
+  body('notes')
+    .optional()
+    .isLength({ max: 1000 })
+    .withMessage('Notes cannot exceed 1000 characters'),
+  
+  handleValidationErrors
+];
+
 export {
   handleValidationErrors,
   validateUserRegistration,
@@ -225,5 +336,7 @@ export {
   validateOTPVerification,
   validatePasswordReset,
   validatePatientCreation,
-  validatePatientUpdate
+  validatePatientUpdate,
+  validatePoseDetectionCreation,
+  validatePoseDetectionUpdate
 };
