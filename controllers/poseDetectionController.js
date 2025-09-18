@@ -1,7 +1,6 @@
 import PoseDetection from '../models/PoseDetection.js';
 import Patient from '../models/Patient.js';
 
-// Create a new pose detection record
 export const createPoseDetection = async (req, res) => {
   try {
     const {
@@ -15,7 +14,6 @@ export const createPoseDetection = async (req, res) => {
 
     const userId = req.user._id;
 
-    // Verify patient exists and belongs to the user
     const patient = await Patient.findOne({
       _id: patientId,
       createdBy: userId
@@ -28,7 +26,7 @@ export const createPoseDetection = async (req, res) => {
       });
     }
 
-    // Create the pose detection record
+
     const poseDetection = await PoseDetection.create({
       patientId,
       createdBy: userId,
@@ -39,12 +37,11 @@ export const createPoseDetection = async (req, res) => {
       notes
     });
 
-    // Update patient's lastScan date
     await Patient.findByIdAndUpdate(patientId, {
       lastScan: new Date()
     });
 
-    // Populate the response
+  
     await poseDetection.populate([
       { path: 'patientId', select: 'fullName gender dateOfBirth' },
       { path: 'createdBy', select: 'firstName lastName email' }
@@ -83,14 +80,14 @@ export const createPoseDetection = async (req, res) => {
   }
 };
 
-// Get all pose detection records for a patient
+
 export const getPoseDetectionsByPatient = async (req, res) => {
   try {
     const { patientId } = req.params;
     const userId = req.user._id;
     const { page = 1, limit = 10 } = req.query;
 
-    // Verify patient exists and belongs to the user
+   
     const patient = await Patient.findOne({
       _id: patientId,
       createdBy: userId
@@ -149,7 +146,7 @@ export const getPoseDetectionsByPatient = async (req, res) => {
   }
 };
 
-// Get a specific pose detection record
+
 export const getPoseDetection = async (req, res) => {
   try {
     const { id } = req.params;
@@ -195,7 +192,9 @@ export const getPoseDetection = async (req, res) => {
   }
 };
 
-// Get all pose detection records for the authenticated user
+
+
+
 export const getAllPoseDetections = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -245,7 +244,7 @@ export const getAllPoseDetections = async (req, res) => {
   }
 };
 
-// Update a pose detection record
+
 export const updatePoseDetection = async (req, res) => {
   try {
     const { id } = req.params;
@@ -301,7 +300,7 @@ export const updatePoseDetection = async (req, res) => {
   }
 };
 
-// Delete a pose detection record
+
 export const deletePoseDetection = async (req, res) => {
   try {
     const { id } = req.params;
@@ -348,13 +347,14 @@ export const deletePoseDetection = async (req, res) => {
   }
 };
 
-// Get pose detection statistics for a patient
+
+
 export const getPoseDetectionStats = async (req, res) => {
   try {
     const { patientId } = req.params;
     const userId = req.user._id;
 
-    // Verify patient exists and belongs to the user
+
     const patient = await Patient.findOne({
       _id: patientId,
       createdBy: userId
@@ -419,6 +419,210 @@ export const getPoseDetectionStats = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Internal server error while retrieving pose detection statistics'
+    });
+  }
+};
+
+// Get pose detection data for a specific patient and date
+export const getPoseDetectionByDate = async (req, res) => {
+  try {
+    const { patientId, date } = req.params;
+    const userId = req.user._id;
+
+    // Validate date format (YYYY-MM-DD)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(date)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid date format. Please use YYYY-MM-DD format'
+      });
+    }
+
+    // Verify patient exists and user has permission
+    const patient = await Patient.findOne({
+      _id: patientId,
+      createdBy: userId
+    });
+
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        message: 'Patient not found or you do not have permission to access this patient'
+      });
+    }
+
+    // Create date range for the specific date (start and end of day)
+    const startDate = new Date(date + 'T00:00:00.000Z');
+    const endDate = new Date(date + 'T23:59:59.999Z');
+
+    // Find pose detection data for the specific date
+    const poseDetection = await PoseDetection.findOne({
+      patientId,
+      createdBy: userId,
+      scanDate: {
+        $gte: startDate,
+        $lte: endDate
+      }
+    })
+    .populate([
+      { path: 'patientId', select: 'fullName gender dateOfBirth' },
+      { path: 'createdBy', select: 'firstName lastName email' }
+    ]);
+
+    if (!poseDetection) {
+      return res.status(404).json({
+        success: false,
+        message: `No pose detection data found for patient on ${date}`,
+        data: {
+          patient: {
+            id: patient._id,
+            fullName: patient.fullName
+          },
+          requestedDate: date,
+          poseDetection: null
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Pose detection data retrieved successfully for ${date}`,
+      data: {
+        patient: {
+          id: patient._id,
+          fullName: patient.fullName
+        },
+        requestedDate: date,
+        poseDetection
+      }
+    });
+  } catch (error) {
+    console.error('Get pose detection by date error:', error);
+    
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid patient ID format'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while retrieving pose detection data by date'
+    });
+  }
+};
+
+// Get pose detection data for a specific patient within a date range
+export const getPoseDetectionByDateRange = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    const { startDate, endDate, page = 1, limit = 10 } = req.query;
+    const userId = req.user._id;
+
+    // Validate date formats
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Both startDate and endDate are required in YYYY-MM-DD format'
+      });
+    }
+
+    if (!dateRegex.test(startDate) || !dateRegex.test(endDate)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid date format. Please use YYYY-MM-DD format'
+      });
+    }
+
+    // Verify patient exists and user has permission
+    const patient = await Patient.findOne({
+      _id: patientId,
+      createdBy: userId
+    });
+
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        message: 'Patient not found or you do not have permission to access this patient'
+      });
+    }
+
+    // Create date range
+    const start = new Date(startDate + 'T00:00:00.000Z');
+    const end = new Date(endDate + 'T23:59:59.999Z');
+
+    if (start > end) {
+      return res.status(400).json({
+        success: false,
+        message: 'Start date must be before or equal to end date'
+      });
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Find pose detection data within the date range
+    const poseDetections = await PoseDetection.find({
+      patientId,
+      createdBy: userId,
+      scanDate: {
+        $gte: start,
+        $lte: end
+      }
+    })
+    .populate([
+      { path: 'patientId', select: 'fullName gender dateOfBirth' },
+      { path: 'createdBy', select: 'firstName lastName email' }
+    ])
+    .sort({ scanDate: -1 })
+    .skip(skip)
+    .limit(parseInt(limit));
+
+    const total = await PoseDetection.countDocuments({
+      patientId,
+      createdBy: userId,
+      scanDate: {
+        $gte: start,
+        $lte: end
+      }
+    });
+
+    res.json({
+      success: true,
+      message: `Pose detection data retrieved successfully for date range ${startDate} to ${endDate}`,
+      data: {
+        patient: {
+          id: patient._id,
+          fullName: patient.fullName
+        },
+        dateRange: {
+          startDate,
+          endDate
+        },
+        poseDetections,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / parseInt(limit)),
+          totalRecords: total,
+          hasNextPage: skip + poseDetections.length < total,
+          hasPrevPage: parseInt(page) > 1
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get pose detection by date range error:', error);
+    
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid patient ID format'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while retrieving pose detection data by date range'
     });
   }
 };

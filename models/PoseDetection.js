@@ -84,7 +84,7 @@ const poseDetectionSchema = new mongoose.Schema({
     required: true
   },
   
-  // Summary data
+
   summary: {
     validPosesDetected: {
       type: Number,
@@ -108,7 +108,7 @@ const poseDetectionSchema = new mongoose.Schema({
     }
   },
 
-  // Detailed analysis
+
   bodyDetection: [bodyRegionSchema],
   proportions: proportionsSchema,
   joints: [jointSchema],
@@ -130,18 +130,17 @@ const poseDetectionSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Indexes for better query performance
+
 poseDetectionSchema.index({ patientId: 1, scanDate: -1 });
 poseDetectionSchema.index({ createdBy: 1, scanDate: -1 });
 poseDetectionSchema.index({ 'summary.bestPoseAccuracy': -1 });
 
-// Virtual for formatted joints detected
+
 poseDetectionSchema.virtual('jointsDetectedCount').get(function() {
   const [detected, total] = this.summary.jointsDetected.split('/').map(Number);
   return { detected, total };
 });
 
-// Virtual for overall assessment
 poseDetectionSchema.virtual('overallAssessment').get(function() {
   const accuracy = this.summary.bestPoseAccuracy;
   if (accuracy >= 90) return 'Excellent';
