@@ -1,4 +1,5 @@
 import Patient from '../models/Patient.js';
+import PoseDetection from '../models/PoseDetection.js';
 
 
 
@@ -125,11 +126,28 @@ export const getPatient = async (req, res) => {
       });
     }
 
+    // Get all scan dates for this patient
+    const scanDates = await PoseDetection.find({
+      patientId: id,
+      createdBy: userId
+    })
+    .select('scanDate')
+    .sort({ scanDate: -1 }); // Sort by most recent first
+
+    // Extract just the dates from the scan records
+    const lastScanDates = scanDates.map(scan => scan.scanDate);
+
+    // Add the lastScanDates array to the patient object
+    const patientWithScanDates = {
+      ...patient.toObject(),
+      lastScanDates
+    };
+
     res.json({
       success: true,
       message: 'Patient retrieved successfully',
       data: {
-        patient
+        patient: patientWithScanDates
       }
     });
   } catch (error) {
