@@ -9,6 +9,8 @@ export const createPoseDetection = async (req, res) => {
       bodyDetection,
       proportions,
       joints,
+      freeflowMode,
+      exercises,
       notes
     } = req.body;
 
@@ -26,6 +28,20 @@ export const createPoseDetection = async (req, res) => {
       });
     }
 
+    // Validate freeflowMode and exercises relationship
+    if (freeflowMode === true && exercises && exercises.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Exercises array must be empty when freeflowMode is true'
+      });
+    }
+
+    if (freeflowMode === false && (!exercises || exercises.length === 0)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Exercises array must contain at least one exercise when freeflowMode is false'
+      });
+    }
 
     const poseDetection = await PoseDetection.create({
       patientId,
@@ -34,6 +50,8 @@ export const createPoseDetection = async (req, res) => {
       bodyDetection,
       proportions,
       joints,
+      freeflowMode: freeflowMode || false,
+      exercises: exercises || [],
       notes
     });
 
@@ -248,7 +266,7 @@ export const getAllPoseDetections = async (req, res) => {
 export const updatePoseDetection = async (req, res) => {
   try {
     const { id } = req.params;
-    const { notes } = req.body;
+    const { notes, freeflowMode, exercises } = req.body;
     const userId = req.user._id;
 
     const poseDetection = await PoseDetection.findOne({
@@ -263,9 +281,28 @@ export const updatePoseDetection = async (req, res) => {
       });
     }
 
-    // Only allow updating notes for now
+    // Validate freeflowMode and exercises relationship if provided
+    if (freeflowMode !== undefined && exercises !== undefined) {
+      if (freeflowMode === true && exercises && exercises.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Exercises array must be empty when freeflowMode is true'
+        });
+      }
+
+      if (freeflowMode === false && (!exercises || exercises.length === 0)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Exercises array must contain at least one exercise when freeflowMode is false'
+        });
+      }
+    }
+
+    // Allow updating notes, freeflowMode, and exercises
     const updateData = {};
     if (notes !== undefined) updateData.notes = notes;
+    if (freeflowMode !== undefined) updateData.freeflowMode = freeflowMode;
+    if (exercises !== undefined) updateData.exercises = exercises;
 
     const updatedPoseDetection = await PoseDetection.findByIdAndUpdate(
       id,
@@ -290,6 +327,15 @@ export const updatePoseDetection = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Invalid pose detection ID format'
+      });
+    }
+
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors
       });
     }
 
@@ -385,7 +431,7 @@ export const getPoseDetectionStats = async (req, res) => {
     const recentScans = await PoseDetection.find({ patientId })
       .sort({ scanDate: -1 })
       .limit(5)
-      .select('summary scanDate overallAssessment');
+      .select('summary scanDate overallAssessment freeflowMode exercises');
 
     res.json({
       success: true,

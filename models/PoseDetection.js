@@ -72,6 +72,19 @@ const proportionsSchema = new mongoose.Schema({
   }
 });
 
+const exerciseSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: [100, 'Exercise name cannot exceed 100 characters']
+  },
+  status: {
+    type: Boolean,
+    required: true
+  }
+});
+
 const poseDetectionSchema = new mongoose.Schema({
   patientId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -112,6 +125,31 @@ const poseDetectionSchema = new mongoose.Schema({
   bodyDetection: [bodyRegionSchema],
   proportions: proportionsSchema,
   joints: [jointSchema],
+
+  // Exercise tracking
+  freeflowMode: {
+    type: Boolean,
+    required: true,
+    default: false
+  },
+  exercises: {
+    type: [exerciseSchema],
+    default: [],
+    validate: {
+      validator: function(exercises) {
+        // If freeflowMode is true, exercises should be empty
+        // If freeflowMode is false, exercises should not be empty
+        if (this.freeflowMode && exercises && exercises.length > 0) {
+          return false;
+        }
+        if (!this.freeflowMode && (!exercises || exercises.length === 0)) {
+          return false;
+        }
+        return true;
+      },
+      message: 'Exercises array must be empty when freeflowMode is true, and must contain at least one exercise when freeflowMode is false'
+    }
+  },
 
   // Additional metadata
   scanDate: {
