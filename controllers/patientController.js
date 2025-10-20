@@ -126,28 +126,40 @@ export const getPatient = async (req, res) => {
       });
     }
 
-    // Get all scan dates for this patient
-    const scanDates = await PoseDetection.find({
+    // Get all pose detection records for this patient
+    const poseDetectionRecords = await PoseDetection.find({
       patientId: id,
       createdBy: userId
     })
-    .select('scanDate')
+    .select('scanDate summary bodyDetection proportions joints freeflowMode exercises notes createdAt')
     .sort({ scanDate: -1 }); // Sort by most recent first
 
-    // Extract just the dates from the scan records
-    const lastScanDates = scanDates.map(scan => scan.scanDate);
+    // Transform the records to include both date and pose detection data
+    const lastScanData = poseDetectionRecords.map(record => ({
+      scanDate: record.scanDate,
+      poseDetectionData: {
+        summary: record.summary,
+        bodyDetection: record.bodyDetection,
+        proportions: record.proportions,
+        joints: record.joints,
+        freeflowMode: record.freeflowMode,
+        exercises: record.exercises,
+        notes: record.notes,
+        createdAt: record.createdAt
+      }
+    }));
 
-    // Add the lastScanDates array to the patient object
-    const patientWithScanDates = {
+    // Add the lastScanData array to the patient object
+    const patientWithScanData = {
       ...patient.toObject(),
-      lastScanDates
+      lastScanData
     };
 
     res.json({
       success: true,
       message: 'Patient retrieved successfully',
       data: {
-        patient: patientWithScanDates
+        patient: patientWithScanData
       }
     });
   } catch (error) {
