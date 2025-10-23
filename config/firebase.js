@@ -21,7 +21,7 @@ const initializeFirebase = () => {
     if (!admin.apps.length) {
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
-        projectId: serviceAccount.project_id || process.env.FIREBASE_PROJECT_ID || 'chirotrack-backend'
+        projectId: serviceAccount.project_id || process.env.FIREBASE_PROJECT_ID || 'chirotrack-48093'
       });
     }
 

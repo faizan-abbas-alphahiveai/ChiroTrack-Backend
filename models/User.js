@@ -25,11 +25,16 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: function() {
-      return !this.firebaseUid; 
+      return !this.firebaseUid && !this.googleUid; 
     },
     minlength: [6, 'Password must be at least 6 characters long']
   },
   firebaseUid: {
+    type: String,
+    unique: true,
+    sparse: true 
+  },
+  googleUid: {
     type: String,
     unique: true,
     sparse: true 
@@ -57,6 +62,14 @@ const userSchema = new mongoose.Schema({
       default: 0
     }
   },
+  isEmailVerified: {
+    type: Boolean,
+    default: false
+  },
+  profilePicture: {
+    type: String,
+    default: null
+  },
 }, {
   timestamps: true
 });
@@ -64,5 +77,6 @@ const userSchema = new mongoose.Schema({
 
 userSchema.index({ email: 1 });
 userSchema.index({ firebaseUid: 1 });
+userSchema.index({ googleUid: 1 });
 
 export default mongoose.model('User', userSchema);

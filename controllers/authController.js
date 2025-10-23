@@ -5,6 +5,7 @@ import TokenBlacklist from '../models/TokenBlacklist.js';
 import { admin } from '../config/firebase.js';
 import { sendPasswordResetEmail } from '../config/email.js';
 import { normalizeEmail } from '../utils/emailUtils.js';
+import { OAuth2Client } from 'google-auth-library';
 
 
 
@@ -13,6 +14,33 @@ const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET || 'fallback-secret', {
     expiresIn: process.env.JWT_EXPIRE || '7d'
   });
+};
+
+// Initialize Google OAuth client
+const client = new OAuth2Client();
+
+// Verify Google OAuth token
+const verifyGoogleToken = async (idToken) => {
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: idToken,
+      audience: '972192322344-6colp56n1af0j01efn3qdeamut1k1mn6.apps.googleusercontent.com' // Your Google OAuth client ID
+    });
+    
+    const payload = ticket.getPayload();
+    
+    // Return payload in Firebase-like format for compatibility
+    return {
+      uid: payload.sub,
+      email: payload.email,
+      name: payload.name,
+      picture: payload.picture,
+      email_verified: payload.email_verified
+    };
+  } catch (error) {
+    console.error('Google token verification error:', error);
+    throw new Error('Invalid Google token');
+  }
 };
 
 
@@ -149,25 +177,36 @@ export const googleSignIn = async (req, res) => {
       });
     }
 
-    // Verify the Firebase ID token with correct audience
-    const decodedToken = await admin.auth().verifyIdToken(idToken, {
-      audience: process.env.FIREBASE_CLIENT_ID || '972192322344-6colp56n1af0j01efn3qdeamut1k1mn6.apps.googleusercontent.com'
-    });
+    // Verify the Google OAuth token instead of Firebase ID token
+    const decodedToken = await verifyGoogleToken(idToken);
     
-    // Check if user exists in our database
-    let user = await User.findOne({ firebaseUid: decodedToken.uid });
+    // Check if user exists in our database by googleUid first, then by email
+    let user = await User.findOne({ googleUid: decodedToken.uid });
     
     if (!user) {
-      // Create new user from Google data
-      user = await User.create({
-        firebaseUid: decodedToken.uid,
-        email: decodedToken.email,
-        firstName: decodedToken.name?.split(' ')[0] || 'User',
-        lastName: decodedToken.name?.split(' ').slice(1).join(' ') || '',
-        provider: 'google',
-        isEmailVerified: decodedToken.email_verified || false,
-        profilePicture: decodedToken.picture || null
-      });
+      // If no user found by googleUid, check if user exists by email
+      user = await User.findOne({ email: decodedToken.email });
+      
+      if (user) {
+        // User exists with this email, update with Google UID
+        user.googleUid = decodedToken.uid;
+        user.provider = 'google';
+        user.isEmailVerified = decodedToken.email_verified || false;
+        user.profilePicture = decodedToken.picture || null;
+        user.lastLogin = new Date();
+        await user.save();
+      } else {
+        // Create new user from Google data
+        user = await User.create({
+          googleUid: decodedToken.uid,
+          email: decodedToken.email,
+          firstName: decodedToken.name?.split(' ')[0] || 'User',
+          lastName: decodedToken.name?.split(' ').slice(1).join(' ') || '',
+          provider: 'google',
+          isEmailVerified: decodedToken.email_verified || false,
+          profilePicture: decodedToken.picture || null
+        });
+      }
     } else {
       // Update existing user's last login
       user.lastLogin = new Date();
