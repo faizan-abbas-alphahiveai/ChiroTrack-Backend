@@ -15,7 +15,7 @@ const initializeFirebase = () => {
     } else {
       // Fallback to local file for development
       console.log('Using Firebase service account from local file');
-      serviceAccount = JSON.parse(readFileSync('./chirotrack-48093-firebase-adminsdk-fbsvc-401caed6fc', 'utf8'));
+      serviceAccount = JSON.parse(readFileSync('./chirotrack-48093-firebase-adminsdk-fbsvc-401caed6fc.json', 'utf8'));
     }
 
     if (!admin.apps.length) {
