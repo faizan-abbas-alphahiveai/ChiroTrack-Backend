@@ -149,8 +149,10 @@ export const googleSignIn = async (req, res) => {
       });
     }
 
-    // Verify the Firebase ID token
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    // Verify the Firebase ID token with correct audience
+    const decodedToken = await admin.auth().verifyIdToken(idToken, {
+      audience: process.env.FIREBASE_CLIENT_ID || '972192322344-6colp56n1af0j01efn3qdeamut1k1mn6.apps.googleusercontent.com'
+    });
     
     // Check if user exists in our database
     let user = await User.findOne({ firebaseUid: decodedToken.uid });
